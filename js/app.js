@@ -52,6 +52,7 @@
     var k = (G.keys.ArrowRight ? 1 : 0) - (G.keys.ArrowLeft ? 1 : 0);
     if (k) return k;
     if (wheel.angle == null || !G.cal) return 0;
+    if (G.calPending) { G.calPending = false; centreNow(); }
     return S.mapSteer(wheel.angle, G.cal, { deadZone: +st.dead, sensitivity: +st.sens });
   }
   function baseCal() { return st.cal || S.defaultCal(wheel.angle == null ? 0 : wheel.angle); }
@@ -59,6 +60,8 @@
     var b = baseCal();
     if (wheel.angle != null && (st.centre === '1' || !st.cal)) G.cal = { centre: wheel.angle, left: b.left, right: b.right };
     else G.cal = b;
+    // no motion reading yet: centre on the first reading that arrives
+    G.calPending = wheel.angle == null && (st.centre === '1' || !st.cal);
   }
 
   // ---------- menu views ----------
@@ -563,7 +566,7 @@
       ann.say(r.problem === 'small' ? 'That turn was too small. Let\'s try again. Hold it centred and tap.' : 'Left and right came out the same way. Let\'s try again. Hold it centred and tap.', { prio: 2 });
       return;
     }
-    st.cal = r.cal; save(); G.cal = r.cal;
+    st.cal = r.cal; save(); G.cal = r.cal; G.calPending = false;
     ann.say('Calibrated. ' + Math.round(Math.abs(r.cal.left)) + ' degrees to the left, ' + Math.round(Math.abs(r.cal.right)) + ' to the right. Now turn the wheel and hear the engine follow it. Tap when you are done.', { prio: 2 });
     hud('Calibrated', 'Turn to test, tap to finish');
     setBar('Finish', '', 'Leave');

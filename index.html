@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>F1 by Ear 2</title>
+<style>
+  :root { color-scheme: dark; --bg:#0b0d12; --panel:#151a23; --text:#f3f5f8; --muted:#b9c2cf; --accent:#ff3b30; --accent2:#ffd60a; --focus:#64d2ff; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--text); font: 17px/1.45 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 12px 14px 70px; }
+  h1 { font-size: 1.6rem; margin: 6px 0 2px; } h1 span { color: var(--accent); }
+  h2 { font-size: 1.15rem; margin: 14px 0 4px; border-top: 1px solid #2a3140; padding-top: 8px; }
+  h3 { font-size: 1.02rem; margin: 12px 0 4px; color: var(--accent2); }
+  p { margin: 4px 0 8px; color: var(--muted); }
+  button, select { font: inherit; touch-action: manipulation; }
+  .b { display:inline-block; min-height: 36px; margin: 3px 4px 3px 0; padding: 5px 10px; border-radius: 8px; border: 1px solid #3a4456; background: var(--panel); color: var(--text); font-size: 0.92rem; font-weight: 600; }
+  .b.p { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .b[aria-pressed="true"] { background: #1f3b57; border-color: var(--focus); }
+  .b[aria-pressed="true"]::after { content: " \2713"; }
+  .b:disabled { opacity: 0.5; }
+  .b:focus-visible, select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .gl { margin: 8px 0 0; font-size: 0.9rem; color: var(--text); font-weight: 600; }
+  select { min-height: 36px; background: var(--panel); color: var(--text); border: 1px solid #3a4456; border-radius: 8px; padding: 4px 8px; max-width: 100%; }
+  .status { min-height: 1.4em; padding: 8px 10px; border-radius: 8px; background: #10151d; color: var(--accent2); margin: 8px 0; }
+  ul.plain { padding-left: 1.2em; } li { margin: 3px 0; color: var(--muted); } li strong { color: var(--text); }
+  a { color: var(--focus); }
+  .view[hidden] { display: none; }
+  .sel { border-left: 4px solid var(--accent); padding: 4px 10px; background: #141922; border-radius: 6px; margin: 6px 0; }
+  .note { border-left: 4px solid var(--accent2); padding: 6px 12px; background: #141922; border-radius: 6px; }
+  #race { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; z-index: 10; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #race.on { display: flex; }
+  #raceBar { display: flex; gap: 6px; padding: 6px; padding-top: max(6px, env(safe-area-inset-top)); background: #0b0d12; }
+  #raceBar button { flex: 1; min-height: 44px; border-radius: 10px; border: 1px solid #3a4456; background: var(--panel); color: var(--text); font-size: 0.95rem; font-weight: 600; }
+  #raceBar button.p { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #pad { flex: 1; touch-action: none; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #8a93a3; text-align: center; padding: 12px; }
+  #hud { font-size: 1.5rem; color: #fff; font-variant-numeric: tabular-nums; } #hud2 { font-size: 1rem; margin-top: 8px; }
+  #results { display: none; padding: 12px; background: #0b0d12; overflow: auto; max-height: 75vh; }
+  #results.on { display: block; }
+  #results li { color: var(--text); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<main id="menu">
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+
+  <section class="view" id="vHome">
+    <h1>F1 <span>by Ear 2</span></h1>
+    <p>Formula One by sound, with a race engineer who calls every corner. Turn the phone like a steering wheel.</p>
+    <h2>Drive</h2>
+    <div class="sel" id="homeTrack"></div>
+    <button class="b p" id="bRace">Race</button><button class="b" id="bChamp">Championship</button><button class="b" id="bTracks">Choose track</button><button class="b" id="bPractice">Free practice</button><button class="b" id="bLesson">Practice lesson</button><button class="b" id="bCalib">Calibrate steering</button>
+    <p id="calInfo"></p>
+    <h2>Menu</h2>
+    <button class="b" data-go="vSettings">Settings</button><button class="b" data-go="vRecords">Records</button><button class="b" data-go="vHelp">How to play</button><button class="b" data-go="vCredits">Credits</button>
+  </section>
+
+  <section class="view" id="vTracks" hidden>
+    <h2 tabindex="-1">Choose a championship</h2>
+    <button class="b" data-go="vHome">Back</button>
+    <p>100 tracks in 10 championships of 10. Pick a championship to see its tracks. You can race or practise on any track at any time. Championships unlock one by one when you finish the one before in the top three.</p>
+    <div id="champList"></div>
+  </section>
+
+  <section class="view" id="vChamp" hidden>
+    <h2 id="champTitle" tabindex="-1">Championship</h2>
+    <button class="b" data-go="vTracks">Back to championships</button>
+    <p id="champBlurb"></p>
+    <div id="champState"></div>
+    <div id="champSel" class="sel" hidden>
+      <h3 id="selTitle" tabindex="-1">Selected track</h3>
+      <p id="selDesc"></p>
+      <button class="b p" id="selRace">Race here</button><button class="b" id="selPractice">Practise here</button><button class="b" id="selHear">Hear about it</button>
+    </div>
+    <h3>Tracks</h3>
+    <div id="champTracks"></div>
+  </section>
+
+  <section class="view" id="vSettings" hidden>
+    <h2 tabindex="-1">Settings</h2>
+    <button class="b" data-go="vHome">Back</button>
+    <h3>Race</h3>
+    <div data-set="laps" data-label="Race length" data-opts="1:1 lap|short:Short, about 5 km|medium:Medium, about 10 km|long:Long, about 20 km"></div>
+    <div data-set="rivals" data-label="Rival cars in a quick race" data-opts="3:3|5:5|7:7|9:9|11:11"></div>
+    <div data-set="diff" data-label="Rivals" data-opts="easy:Easy|medium:Medium|hard:Hard"></div>
+    <div data-set="grid" data-label="Start from" data-opts="back:Back of the grid|middle:Middle|pole:Pole"></div>
+    <div data-set="speed" data-label="Speed control" data-opts="manual:Pedals, one thumb go, two brake|auto:Automatic, you only steer"></div>
+    <h3>Speech</h3>
+    <div data-set="verb" data-label="Commentary" data-opts="corners:Corners only|positions:Corners and positions|full:Full commentary"></div>
+    <div data-set="rate" data-label="Speech rate" data-opts="0.95:Slow|1.1:Normal|1.25:Fast|1.45:Very fast"></div>
+    <div data-set="lead" data-label="Corner calls" data-opts="0.6:Earlier|0:Normal|-0.3:Later"></div>
+    <div data-set="tones" data-label="Corner tones as well as speech" data-opts="0:Off|1:On"></div>
+    <p class="gl"><label for="sVoice">Voice</label></p>
+    <select id="sVoice"><option value="">Automatic British voice</option></select>
+    <button class="b" id="bTestVoice">Test voice</button>
+    <h3>Sound</h3>
+    <div data-set="vol" data-label="Game volume" data-opts="0.5:Quiet|0.7:Medium|0.9:Loud|1:Loudest"></div>
+    <div data-set="eng" data-label="Your engine" data-opts="0.5:Quiet|0.7:Medium|0.85:Loud|1:Loudest"></div>
+    <div data-set="riv" data-label="Rival engines" data-opts="0.5:Quiet|0.7:Medium|0.85:Loud|1:Loudest"></div>
+    <h3>Steering</h3>
+    <div data-set="sens" data-label="Sensitivity" data-opts="0.8:Gentle|1:Normal|1.3:Sharp|1.6:Very sharp"></div>
+    <div data-set="dead" data-label="Dead zone in the middle" data-opts="0:None|0.04:Small|0.1:Large"></div>
+    <div data-set="smooth" data-label="Smoothing" data-opts="low:Light|normal:Normal|high:Heavy"></div>
+    <div data-set="centre" data-label="Centre the wheel at each start" data-opts="1:Yes|0:No, keep my calibration"></div>
+    <h3>Progress</h3>
+    <div data-set="unlockAll" data-label="Unlock every championship" data-opts="0:No|1:Yes"></div>
+    <button class="b" id="bReset">Reset all progress</button>
+  </section>
+
+  <section class="view" id="vRecords" hidden>
+    <h2 tabindex="-1">Records</h2>
+    <button class="b" data-go="vHome">Back</button>
+    <div id="best"></div>
+  </section>
+
+  <section class="view" id="vHelp" hidden>
+    <h2 tabindex="-1">How to play</h2>
+    <button class="b" data-go="vHome">Back</button>
+    <h3>VoiceOver</h3>
+    <p class="note">VoiceOver takes over the screen, so the pedals cannot work while it is on. Choose Automatic speed control in Settings and you only steer, so VoiceOver can stay on: double-tap Start lights. For pedals, double-tap Race, then triple-click the side button to turn VoiceOver off, and triple-click again after the race.</p>
+    <h3>Holding the phone</h3>
+    <p>Hold the phone sideways in both hands like a steering wheel, screen facing you, and turn it left and right. Either landscape direction works. Wear headphones so you hear left and right.</p>
+    <h3>Touches</h3>
+    <ul class="plain">
+      <li><strong>Accelerate:</strong> hold one thumb on the screen. <strong>Coast:</strong> lift off. <strong>Brake:</strong> hold two thumbs.</li>
+      <li><strong>Gear, speed and position:</strong> tap twice quickly with two fingers, or double-tap the Info button.</li>
+      <li><strong>Pause:</strong> tap with three fingers. Tap with three fingers again to carry on. Hold three fingers for two seconds while paused to leave.</li>
+    </ul>
+    <h3>Your race engineer</h3>
+    <ul class="plain">
+      <li><strong>Corner calls</strong> come early, for example "Right hairpin in 250, heavy braking", then "Brake now", then "Turn right" as you reach it. A chicane is "Chicane, left then right", and you hear "Now left" for the second part.</li>
+      <li>Words for corners, slowest to fastest: hairpin, tight, slow, medium, fast. "Flat out" means no braking. "Long" means hold the wheel for a while. "Tightens" means the second part is slower.</li>
+      <li><strong>Where you are:</strong> "Wide right, steer left" when you drift to the edge, and "Off track, steer left" if you leave the road.</li>
+      <li>Commentary in Settings: corners only, corners and positions, or full commentary with overtakes, gaps, rival mistakes, slipstream and gears.</li>
+    </ul>
+    <h3>Sounds</h3>
+    <ul class="plain">
+      <li><strong>Engine:</strong> eight gears. Revs climb in each gear, then drop with a crackle at each upshift. Under braking you hear blips and pops as it changes down. Hold it flat in top gear in a slipstream and it bounces off the limiter.</li>
+      <li>Your engine sits where your car is across the track: in your left ear means you are on the left.</li>
+      <li><strong>Tyres:</strong> a hiss means you are near the limit of grip, a squeal means you are over it.</li>
+      <li><strong>Kerbs</strong> rumble at the edge, <strong>gravel</strong> crunches and slows you, <strong>barriers</strong> crash. A big hit at speed is a crash: the car stops for three seconds, then you go again.</li>
+      <li><strong>Rivals</strong> are heard where they are. Pull out of a car's lane to pass. Close behind a car on a straight you get a slipstream, with a rushing wind.</li>
+      <li><strong>The start:</strong> five beeps and numbers for the five red lights, a pause, then "Lights out, go".</li>
+    </ul>
+  </section>
+
+  <section class="view" id="vCredits" hidden>
+    <h2 tabindex="-1">Credits</h2>
+    <button class="b" data-go="vHome">Back</button>
+    <p>Made by Work Mate for Ahsan Ali, November 2026. Version 2. Engine recordings are pitch-shifted to follow the gearbox. All recordings come from Freesound and are free to reuse.</p>
+    <ul class="plain" id="credits">
+    <li><strong>Your engine, low revs:</strong> "F1 BR 06 Engine Starts" by rfhache, <a href="https://freesound.org/s/44771/">freesound.org/s/44771</a>, licence CC BY 4.0.</li>
+    <li><strong>Your engine, high revs:</strong> "RedLine" by egomassive (from "DynomometerPulls-1700HP" by Ears68), <a href="https://freesound.org/s/536754/">freesound.org/s/536754</a>, CC0.</li>
+    <li><strong>Rival engines:</strong> "F1practice3MelbGP2012DR066" by Ears68, 2012 Australian Grand Prix, <a href="https://freesound.org/s/150337/">freesound.org/s/150337</a>, CC0.</li>
+    <li><strong>Kerbs:</strong> "rumble strip exit 41" by bsumusictech, <a href="https://freesound.org/s/62652/">freesound.org/s/62652</a>, CC0.</li>
+    <li><strong>Gravel:</strong> "Tires on Gravel Road 1" by OBXJohn, <a href="https://freesound.org/s/251661/">freesound.org/s/251661</a>, CC0.</li>
+    <li><strong>Tyre squeal:</strong> "screeching tyres / tires" by johnnydekk, <a href="https://freesound.org/s/614627/">freesound.org/s/614627</a>, CC0.</li>
+    <li><strong>Barrier crash:</strong> "Car Crash" by squareal, <a href="https://freesound.org/s/237375/">freesound.org/s/237375</a>, CC0.</li>
+    <li><strong>Car contact:</strong> "Clank Car Crash Collision" by qubodup, <a href="https://freesound.org/s/151624/">freesound.org/s/151624</a>, CC0.</li>
+    <li><strong>Grandstand crowd:</strong> "Pre start Crowd F1 race 2022 Autódromo José Carlos Pace" by Anzeladac, <a href="https://freesound.org/s/704960/">freesound.org/s/704960</a>, CC BY 4.0.</li>
+    <li><strong>Finish cheer:</strong> "RoaringCrowd" by benfree, <a href="https://freesound.org/s/130568/">freesound.org/s/130568</a>, CC0.</li>
+    <li><strong>Finish air horns:</strong> "F1 Podium Champagne Air Horns" by WebbFilmsUK, <a href="https://freesound.org/s/200812/">freesound.org/s/200812</a>, CC BY 4.0.</li>
+      <li>Gear-change crackles, downshift pops, wind, the engine's synthesised layer, corner tones and start beeps are made by the game.</li>
+      <li>All tracks are fictional. Tracks called "-style" are inspired by famous circuits and are not copies of them. All rival drivers are fictional.</li>
+    </ul>
+    <p>CC BY 4.0: <a href="https://creativecommons.org/licenses/by/4.0/">creativecommons.org/licenses/by/4.0</a>. CC0: <a href="https://creativecommons.org/publicdomain/zero/1.0/">creativecommons.org/publicdomain/zero/1.0</a>.</p>
+  </section>
+</main>
+
+<div id="race" aria-hidden="true">
+  <div id="raceBar">
+    <button id="rMain" class="p">Start lights</button>
+    <button id="rInfo">Info</button>
+    <button id="rPause">Pause</button>
+    <button id="rLeave">Leave</button>
+  </div>
+  <p class="sr">Race screen. One thumb accelerates, two thumbs brake, two quick two-finger taps give gear and speed, a three-finger tap pauses. With automatic speed you only steer, and VoiceOver can stay on.</p>
+  <div id="pad">
+    <div id="hud" aria-hidden="true">Grid</div>
+    <div id="hud2" aria-hidden="true"></div>
+  </div>
+  <div id="results" tabindex="-1">
+    <h2 id="resTitle">Results</h2>
+    <ol id="resList"></ol>
+    <p id="resNote"></p>
+    <div id="resChamp"></div>
+    <button class="b p" id="resNext">Next round</button><button class="b" id="resAgain">Race again</button><button class="b" id="resMenu">Back to the menu</button>
+  </div>
+</div>
+
+<script src="js/tracks.js"></script>
+<script src="js/logic.js"></script>
+<script src="js/steer.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/speech.js"></script>
+<script src="js/words.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
